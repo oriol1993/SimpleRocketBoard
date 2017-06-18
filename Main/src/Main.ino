@@ -34,6 +34,7 @@ void buttonCheck(){
    state = !state;
    last_bttn = millis();
    led_flash = millis();
+   led_state = 1;
   }
  }
 }
