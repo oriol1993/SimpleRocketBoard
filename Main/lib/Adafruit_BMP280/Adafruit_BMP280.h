@@ -22,7 +22,7 @@
  #include "WProgram.h"
 #endif
 
-#include <Adafruit_Sensor.h>
+//#include <Adafruit_Sensor.h>
 
 #ifdef __AVR_ATtiny85__
  #include "TinyWireM.h"
@@ -132,6 +132,7 @@ class Adafruit_BMP280
     float readPressure(void);
     float readAltitude(float seaLevelhPa = 1013.25);
 
+    uint8_t osrs_p = 15, osrs_t = 1, t_sb = 0, filter = 5;
   private:
 
     void readCoefficients(void);

@@ -62,7 +62,8 @@ bool Adafruit_BMP280::begin(uint8_t a, uint8_t chipid) {
     return false;
 
   readCoefficients();
-  write8(BMP280_REGISTER_CONTROL, 0x3F);
+  write8(BMP280_REGISTER_CONTROL,osrs_t<<5 | osrs_p<<2 | 11);
+  write8(BMP280_REGISTER_CONFIG, t_sb<<5 & filter<<2);
   return true;
 }
 
@@ -205,7 +206,7 @@ uint32_t Adafruit_BMP280::read24(byte reg)
     Wire.write((uint8_t)reg);
     Wire.endTransmission();
     Wire.requestFrom((uint8_t)_i2caddr, (byte)3);
-    
+
     value = Wire.read();
     value <<= 8;
     value |= Wire.read();
@@ -217,7 +218,7 @@ uint32_t Adafruit_BMP280::read24(byte reg)
       SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE0));
     digitalWrite(_cs, LOW);
     spixfer(reg | 0x80); // read, bit 7 high
-    
+
     value = spixfer(0);
     value <<= 8;
     value |= spixfer(0);
