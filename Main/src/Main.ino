@@ -26,7 +26,7 @@ void setup(){
   pinMode(PB, INPUT_PULLUP);
   if(!digitalRead(PB) | force_serial){
     Serial.begin(9600);
-    for(uint8_t i=0;i<5;i++)
+    for(uint8_t i=0;i<7;i++)
     {
       digitalWrite(LED,HIGH);
       delay(100);
