@@ -1,18 +1,19 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
-//#include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 Adafruit_BMP280 bmp;
 
 #define LED 3
 #define PB 5
+#define force_serial 1
 
 uint8_t state = 0;
 uint32_t last_bttn = 0;
 uint32_t led_flash = 0;
 uint8_t led_state = 0;
 uint32_t t_lastbmp = 0;
+bool serial_init = 0;
 
 void setup();
 void loop();
@@ -20,23 +21,35 @@ void buttonCheck();
 void checkLed();
 
 void setup(){
- pinMode(LED, OUTPUT);
- pinMode(PB, INPUT_PULLUP);
- Serial.begin(9600);
- Serial.println(F("BMP280 test"));
+  // Input and output
+  pinMode(LED, OUTPUT);
+  pinMode(PB, INPUT_PULLUP);
+  if(!digitalRead(PB) | force_serial){
+    Serial.begin(9600);
+    for(uint8_t i=0;i<5;i++)
+    {
+      digitalWrite(LED,HIGH);
+      delay(100);
+      digitalWrite(LED,LOW);
+      delay(100);
+    }
+    serial_init = 1;
+  }
 
- bmp.osrs_p = 15;
- bmp.osrs_t = 1;
- bmp.t_sb = 0;
- bmp.filter = 5;
+  // BMP180 Initialization
+  bmp.osrs_p = 15; // 4.3.4 Table 21
+  bmp.osrs_t = 1; // 4.3.4 Table 22
+  bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
+  bmp.filter = 5; // 3.3.3
 
- if (!bmp.begin()) {
-   Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
-   while (1);
- }else{
-   Serial.println(F("BMP Initialized!"));
- }
-}
+  Serial.print(F("Initializing BMP280 ..."));
+  if (!bmp.begin()) {
+      Serial.println(F("Unable to connect!"));
+      while (1);
+    }else{
+      Serial.println(F("Connection successful!"));
+    }
+  }
 
 void loop(){
  buttonCheck();
