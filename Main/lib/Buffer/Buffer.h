@@ -7,8 +7,7 @@ class Buffer
     void Check();
 
   private:
-    byte posicio[300];
-    unsigned int head;    //Primera posicio lliure
-    unsigned int tail;    //Ultima posicio ocupada
-
+    uint8_t posicio[300];
+    uint16_t head;    //Primera posicio lliure
+    uint16_t tail;    //Ultima posicio ocupada
 };
