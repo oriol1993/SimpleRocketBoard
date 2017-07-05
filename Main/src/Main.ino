@@ -2,7 +2,9 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
+#include <Buffer.h>
 Adafruit_BMP280 bmp;
+Buffer cbuffer;
 
 #define LED 3
 #define PB 5
