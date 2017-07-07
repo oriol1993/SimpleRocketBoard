@@ -16,13 +16,6 @@ void Buffer::CarregarBuffer(byte data[], int num)
       head = 0;
     }
   }
-  if (Check()) {
-    DescarregarBuffer();
-    tail = tail + page_sz;
-    if (tail > (buff_sz - 1)) {
-      tail = tail - (buff_sz - 1);
-    }
-  }
 }
 
 void Buffer::DescarregarBuffer()
