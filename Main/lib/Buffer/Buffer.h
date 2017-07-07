@@ -7,14 +7,14 @@ class Buffer
 {
   public:
     void reset();
-    void CarregarBuffer(byte data[], int num);
-    void DescarregarBuffer();
+    void CarregarBuffer(byte data[],uint8_t num);
+    void DescarregarBuffer(byte data[],uint8_t num);
     bool Check();
-    bool spaceAvailable(int numeroBytes);
+    bool spaceAvailable(uint16_t numeroBytes);
 
   private:
     byte posicio[buff_sz];
-    unsigned int head;    //Primera posicio lliure
-    unsigned int tail;    //Ultima posicio ocupada
-    int posicionsPlenes;
+    uint16_t head;    //Primera posicio lliure
+    uint16_t tail;    //Ultima posicio ocupada
+    uint16_t posicionsPlenes;
 };
