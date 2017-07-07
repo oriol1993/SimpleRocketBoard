@@ -12,15 +12,15 @@ void Buffer::CarregarBuffer(byte data[], int num)
   for (int i = 0; i > 3; i++) {
     posicio[head] = data[i];
     head ++;
-    if (head == 300) {
+    if (head == buff_sz) {
       head = 0;
     }
   }
   if (Check()) {
     DescarregarBuffer();
-    tail = tail + 256;
-    if (tail > 299) {
-      tail = tail - 299;
+    tail = tail + page_sz;
+    if (tail > (buff_sz - 1)) {
+      tail = tail - (buff_sz - 1);
     }
   }
 }
@@ -36,12 +36,24 @@ bool Buffer::Check()
     posicionsPlenes = head - tail;
   }
   else {
-    posicionsPlenes = 300 - (tail - 1) + head;
+    posicionsPlenes = buff_sz - (tail - 1) + head;
   }
-  if (posicionsPlenes > 256) {
+  if (posicionsPlenes > page_sz) {
     return true;
   }
   else {
     return false;
+  }
+}
+
+bool Buffer::spaceAvailable(int numeroBytes)
+{
+  if (head > tail) {
+    if ((buff_sz - (head - tail)) > numeroBytes) {return true;}
+    else {return false;}
+  }
+  else {
+    if ((buff_sz - (buff_sz - (tail - 1) + head)) > numeroBytes) {return true;}
+    else {return false;}
   }
 }

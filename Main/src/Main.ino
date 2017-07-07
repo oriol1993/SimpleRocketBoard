@@ -9,6 +9,8 @@ Buffer cbuffer;
 #define LED 3
 #define PB 5
 #define force_serial 1
+#define bytes_alt 4
+#define bytes_timestamp 2
 
 uint8_t state = 0;
 uint32_t last_bttn = 0;
@@ -92,12 +94,22 @@ void print_bmp(){
   {
     alt = bmp.readAltitude(1013.25); // this should be adjusted to your local forcase
     timestamp ++;
-    byte altByte[4];  //Creo un array de 4 bytes buit
+    byte altByte[bytes_alt];  //Creo un array de 4 bytes buit
     floatToByte(alt, altByte[0]);  //Converteixo el array buit en un array ple amb el float (alt)
-    cbuffer.CarregarBuffer(altByte[0], 4); //Paso la altura al buffer
-    byte timeByte[2]; //Creo un array de 2 bytes buit
+    if (cbuffer.spaceAvailable(bytes_alt)) {    //Comprovo si hi ha espai al buffer per gravar la altura
+      cbuffer.CarregarBuffer(altByte[0], bytes_alt); //Si hi ha espai gravo la altura al buffer
+    }
+
+//falte ficar un else aqui per descarregar el buffer si esta massa ple
+
+    byte timeByte[bytes_timestamp]; //Creo un array de 2 bytes buit
     floatToByte(timestamp, timeByte[0]);  //Converteixo el array buit en un array amb el timestamp
-    cbuffer.CarregarBuffer(timeByte[0], 2); //Paso el timestamp al buffer
+    if (cbuffer.spaceAvailable(bytes_timestamp)) {
+      cbuffer.CarregarBuffer(altByte[0], bytes_timestamp);
+    }
+
+//ficar un else aqui tambe igual que abans
+
     t_lastbmp = millis();
   }
 }
