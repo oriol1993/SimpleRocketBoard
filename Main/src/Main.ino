@@ -15,12 +15,15 @@ uint32_t last_bttn = 0;
 uint32_t led_flash = 0;
 uint8_t led_state = 0;
 uint32_t t_lastbmp = 0;
+float alt = 0;
+uint16_t timestamp = 0;
 bool serial_init = 0;
 
 void setup();
 void loop();
 void buttonCheck();
 void checkLed();
+void floatToByte();
 
 void setup(){
   // Input and output
@@ -51,6 +54,9 @@ void setup(){
     }else{
       Serial.println(F("Connection successful!"));
     }
+
+  // Buffer Initialization (head = 0; tail = 0)
+  cbuffer.reset();
   }
 
 void loop(){
@@ -83,16 +89,27 @@ void checkLed(){
 
 void print_bmp(){
   if(millis()-t_lastbmp>2000)
-  {  Serial.print(F("Temperature = "));
-    Serial.print(bmp.readTemperature());
-    Serial.println(" *C");
-    Serial.print(F("Pressure = "));
-    Serial.print(bmp.readPressure());
-    Serial.println(" Pa");
-    Serial.print(F("Approx altitude = "));
-    Serial.print(bmp.readAltitude(1013.25)); // this should be adjusted to your local forcase
-    Serial.println(" m");
-    Serial.println();
+  {
+    alt = bmp.readAltitude(1013.25); // this should be adjusted to your local forcase
+    timestamp ++;
+    byte altByte[4];  //Creo un array de 4 bytes buit
+    floatToByte(alt, altByte[0]);  //Converteixo el array buit en un array ple amb el float (alt)
+    cbuffer.CarregarBuffer(altByte[0], 4); //Paso la altura al buffer
+    byte timeByte[2]; //Creo un array de 2 bytes buit
+    floatToByte(timestamp, timeByte[0]);  //Converteixo el array buit en un array amb el timestamp
+    cbuffer.CarregarBuffer(timeByte[0], 2); //Paso el timestamp al buffer
     t_lastbmp = millis();
   }
+}
+
+void floatToByte(float val,byte &bytes_array){
+  // Create union of shared memory space
+  union {
+    float float_variable;
+    byte temp_array[4];
+  } u;
+  // Overite bytes of union with float variable
+  u.float_variable = val;
+  // Assign bytes to input array
+  memcpy(bytes_array, u.temp_array, 4);
 }

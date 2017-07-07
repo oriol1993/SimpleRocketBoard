@@ -2,13 +2,14 @@
 class Buffer
 {
   public:
-    void CarregarBuffer();
+    void reset();
+    void CarregarBuffer(byte data[], int num);
     void DescarregarBuffer();
-    void Check();
+    bool Check();
 
   private:
     byte posicio[300];
     unsigned int head;    //Primera posicio lliure
     unsigned int tail;    //Ultima posicio ocupada
-
+    int posicionsPlenes;
 };
