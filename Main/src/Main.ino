@@ -31,6 +31,7 @@ uint32_t t_lastbmp = 0;
 float alt = 0;
 uint16_t timestamp = 0;
 bool serial_init = 0;
+float ground_pressure = 1013.25;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                            FUNCTIONS
@@ -64,6 +65,8 @@ void setup(){
   bmp.osrs_t = 1; // 4.3.4 Table 22
   bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
   bmp.filter = 5; // 3.3.3
+  get_gnd_pressure(ground_pressure);
+  Serial.print("p @ h=0m = "); Serial.print(ground_pressure); Serial.println(" Pa");
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
 }
 
@@ -109,8 +112,8 @@ void print_bmp(){
   if(millis()-t_lastbmp>2000  || 1)
   {
     // Acquire heigh measurement and time stamp
-    alt = bmp.readAltitude(1013.25);
-    timestamp = micros()%6553600;
+    alt = bmp.readAltitude(ground_pressure);
+    timestamp = (micros()/100)%65536;
 
     // Load data into buffer
     float2byte(alt, altByte);  // Convert float to byte array
@@ -161,4 +164,14 @@ float byte2float(byte bytes_array[]){
   float out_float;
   memcpy(&out_float, bytes_array, 4);   // Assign bytes to input array
   return out_float;
+}
+
+void get_gnd_pressure(float &ground_pressure){
+  uint8_t n=25;
+  ground_pressure = 0;
+  for(uint8_t i=0;i<25;i++){
+      ground_pressure += bmp.readPressure();
+      delay(50);
+  }
+  ground_pressure = ground_pressure/(float) (n*100);
 }
