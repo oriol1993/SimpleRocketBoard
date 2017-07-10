@@ -18,7 +18,6 @@
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define initial_page 1
-#define output_choice 2 //'1' for HEX or '2' for DEC
 
 // Declarations
 Adafruit_BMP280 bmp;
@@ -206,7 +205,7 @@ void passDataToFlash(){
   flash.writeULong(0, 0, address + 1, true);
 }
 
-void printAllPages(uint8_t outputType) {
+void printAllPages() {
   if (!Serial)
     Serial.begin(115200);
 
@@ -241,7 +240,7 @@ void switchTask(uint8_t var){
       flash.eraseChip();
       break;
     case 9:
-      printAllPages(output_choice);
+      printAllPages();
       break;
     default:
       break;
