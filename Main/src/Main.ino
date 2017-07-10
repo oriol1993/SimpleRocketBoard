@@ -36,7 +36,7 @@ float alt = 0;
 uint16_t timestamp = 0;
 bool serial_init = 0;
 float ground_pressure = 1013.25;
-int address = 0;
+unsigned long address = 0;
 uint8_t dataInPage = 0;
 uint8_t serialData = 0;
 
@@ -64,7 +64,7 @@ void setup(){
   dataInPage = (bytes_alt + bytes_timestamp)/(256);
 
   flash.begin();
-  flash.writeByte(0, 0, initial_page, true);
+  flash.writeULong(0, 0, initial_page, true);
 
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
@@ -194,8 +194,7 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-
-  address = flash.readByte(0, 0, true);
+  address = flash.readULong(0, 0, true);
 
   for (uint8_t i = 0; i < dataInPage; i++) {
     cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
@@ -204,7 +203,7 @@ void passDataToFlash(){
     flash.writeByteArray(address, (4 + (6 * i)), *timeByte, bytes_timestamp, true);
   }
   flash.eraseSector(0, 0);
-  flash.writeByte(0, 0, address + 1, true);
+  flash.writeULong(0, 0, address + 1, true);
 }
 
 void readFlash(){
