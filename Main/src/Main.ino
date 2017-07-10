@@ -212,31 +212,26 @@ void printAllPages(uint8_t outputType) {
 
   Serial.println("Reading all pages");
   uint8_t data_buffer[256];
+  uint8_t alt_buffer[4];
+  uint8_t timestamp_buffer[2];
 
   uint32_t maxPage = flash.getMaxPage();
   for (int a = 0; a < maxPage; a++) {
     flash.readByteArray(a, 0, &data_buffer[0], 256);
-    _printPageBytes(data_buffer, outputType);
-  }
-}
-
-void _printPageBytes(uint8_t *data_buffer, uint8_t outputType) {
-  char buffer[10];
-  for (int a = 0; a < 16; ++a) {
-    for (int b = 0; b < 16; ++b) {
-      if (outputType == 1) {
-        sprintf(buffer, "%02x", data_buffer[a * 16 + b]);
-        Serial.print(buffer);
+    for (uint8_t i = 0; i < (256/6); i++) {
+      for (uint8_t j = 0; j < 4; j++) {
+        alt_buffer[j] = data_buffer[(6 * i) + j];
       }
-      else if (outputType == 2) {
-        uint8_t x = data_buffer[a * 16 + b];
-        if (x < 10) Serial.print("0");
-        if (x < 100) Serial.print("0");
-        Serial.print(x);
-        Serial.print(',');
-      }
+      float2byte(alt, alt_buffer);
+      Serial.println(alt);
     }
-    Serial.println();
+    for (uint8_t i = 0; i < (256/6); i++) {
+      for (uint8_t j = 0; j < 2; j++) {
+        timestamp_buffer[j] = data_buffer[4 + (6 * i) + j]
+      }
+      timestamp = timestamp_buffer[0] | timestamp_buffer[1]<<8;
+      Serial.println(timestamp);
+    }
   }
 }
 
