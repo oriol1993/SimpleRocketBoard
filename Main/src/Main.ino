@@ -17,6 +17,7 @@
 #define force_serial 1
 #define bytes_alt 4
 #define bytes_timestamp 2
+#define initial_page 1
 
 // Declarations
 Adafruit_BMP280 bmp;
@@ -63,6 +64,7 @@ void setup(){
   dataInPage = (bytes_alt + bytes_timestamp)/(256);
 
   flash.begin();
+  flash.writeByte(0, 0, initial_page, true);
 
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
@@ -193,8 +195,7 @@ void get_gnd_pressure(float &ground_pressure){
 
 void passDataToFlash(){
 
-  address = flash.readByte(0);
-
+  address = flash.readByte(0, 0, true);
 
   for (uint8_t i = 0; i < dataInPage; i++) {
     cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
@@ -202,8 +203,8 @@ void passDataToFlash(){
     flash.writeByteArray(address, (i * 6), *altByte, bytes_alt, true);
     flash.writeByteArray(address, (4 + (6 * i)), *timeByte, bytes_timestamp, true);
   }
-  flash.eraseSector(0);
-  flash.writeByte(0, address + 1);
+  flash.eraseSector(0, 0);
+  flash.writeByte(0, 0, address + 1, true);
 }
 
 void readFlash(){
