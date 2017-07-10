@@ -202,7 +202,6 @@ void passDataToFlash(){
     flash.writeByteArray(address, (i * 6), *altByte, bytes_alt, true);
     flash.writeByteArray(address, (4 + (6 * i)), *timeByte, bytes_timestamp, true);
   }
-  flash.eraseSector(0, 0);
   flash.writeULong(0, 0, address + 1, true);
 }
 
