@@ -18,6 +18,7 @@
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define initial_page 1
+#define output_choice 2 //'1' for HEX or '2' for DEC
 
 // Declarations
 Adafruit_BMP280 bmp;
@@ -205,8 +206,38 @@ void passDataToFlash(){
   flash.writeULong(0, 0, address + 1, true);
 }
 
-void readFlash(){
+void printAllPages(uint8_t outputType) {
+  if (!Serial)
+    Serial.begin(115200);
 
+  Serial.println("Reading all pages");
+  uint8_t data_buffer[256];
+
+  uint32_t maxPage = flash.getMaxPage();
+  for (int a = 0; a < maxPage; a++) {
+    flash.readByteArray(a, 0, &data_buffer[0], 256);
+    _printPageBytes(data_buffer, outputType);
+  }
+}
+
+void _printPageBytes(uint8_t *data_buffer, uint8_t outputType) {
+  char buffer[10];
+  for (int a = 0; a < 16; ++a) {
+    for (int b = 0; b < 16; ++b) {
+      if (outputType == 1) {
+        sprintf(buffer, "%02x", data_buffer[a * 16 + b]);
+        Serial.print(buffer);
+      }
+      else if (outputType == 2) {
+        uint8_t x = data_buffer[a * 16 + b];
+        if (x < 10) Serial.print("0");
+        if (x < 100) Serial.print("0");
+        Serial.print(x);
+        Serial.print(',');
+      }
+    }
+    Serial.println();
+  }
 }
 
 void switchTask(uint8_t var){
@@ -214,8 +245,8 @@ void switchTask(uint8_t var){
     case 1:
       flash.eraseChip();
       break;
-    case 2:
-      readFlash();
+    case 9:
+      printAllPages(output_choice);
       break;
     default:
       break;
