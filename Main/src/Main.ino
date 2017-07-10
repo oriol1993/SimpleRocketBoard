@@ -8,6 +8,8 @@
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
 #include <Buffer.h>
+#include <SPIFlash.h>
+#include <SPI.H>
 
 // Constants and sizes
 #define LED 3
@@ -19,6 +21,7 @@
 // Declarations
 Adafruit_BMP280 bmp;
 Buffer cbuffer;
+SPIFlash flash;
 
 byte altByte[bytes_alt];
 byte timeByte[bytes_timestamp];
@@ -32,6 +35,9 @@ float alt = 0;
 uint16_t timestamp = 0;
 bool serial_init = 0;
 float ground_pressure = 1013.25;
+int address = 0;
+uint8_t dataInPage = 0;
+uint8_t serialData = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                            FUNCTIONS
@@ -53,6 +59,11 @@ void setup(){
     serial_init = 1;
   }
 
+  //DataInPage calculation + flash Initialization
+  dataInPage = (bytes_alt + bytes_timestamp)/(256);
+
+  flash.begin();
+
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
   if (!bmp.begin()) {
@@ -73,6 +84,10 @@ void setup(){
 void loop(){
  buttonCheck();
  checkLed();
+ if (Serial.available() > 0) {
+   serialData = Serial.parseInt();
+   switchTask(serialData);
+ }
  Serial.println("Writing to buffer...");
  for(uint8_t u=0;u<10;u++)
  {
@@ -83,7 +98,7 @@ void loop(){
  {
    buffer2serial();
  }
- while(1);
+ while(1);    //Only for debugging purposes
 }
 
 void buttonCheck(){
@@ -174,4 +189,36 @@ void get_gnd_pressure(float &ground_pressure){
       delay(50);
   }
   ground_pressure = ground_pressure/(float) (n*100);
+}
+
+void passDataToFlash(){
+
+  address = flash.readByte(0);
+
+
+  for (uint8_t i = 0; i < dataInPage; i++) {
+    cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
+    cbuffer.DescarregarBuffer(timeByte, sizeof(timeByte));
+    flash.writeByteArray(address, (i * 6), *altByte, bytes_alt, true);
+    flash.writeByteArray(address, (4 + (6 * i)), *timeByte, bytes_timestamp, true);
+  }
+  flash.eraseSector(0);
+  flash.writeByte(0, address + 1);
+}
+
+void readFlash(){
+
+}
+
+void switchTask(uint8_t var){
+  switch (var) {
+    case 1:
+      flash.eraseChip();
+      break;
+    case 2:
+      readFlash();
+      break;
+    default:
+      break;
+  }
 }
