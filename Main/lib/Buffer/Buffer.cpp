@@ -5,11 +5,12 @@ void Buffer::reset()
 {
   head = 0;
   tail = 0;
+  for(uint16_t ii=0;ii<buff_sz;ii++){posicio[ii]=0;}
 }
 
-void Buffer::CarregarBuffer(byte data[], uint8_t num)
+void Buffer::CarregarBuffer(byte data[], uint16_t num)
 {
-  for (uint8_t i = 0; i < num; i++) {
+  for (uint16_t i = 0; i < num; i++) {
     posicio[head++] = data[i];
     if (head == buff_sz) {
       head = 0;
@@ -17,9 +18,9 @@ void Buffer::CarregarBuffer(byte data[], uint8_t num)
   }
 }
 
-void Buffer::DescarregarBuffer(byte data[],uint8_t num)
+void Buffer::DescarregarBuffer(byte data[],uint16_t num)
 {
-  for (uint8_t i = 0; i < num; i++) {
+  for (uint16_t i = 0; i < num; i++) {
     data[i] = posicio[tail++];
     if (tail == buff_sz) {
       tail = 0;
@@ -27,31 +28,16 @@ void Buffer::DescarregarBuffer(byte data[],uint8_t num)
   }
 }
 
-bool Buffer::Check()
+bool Buffer::Check(uint16_t available_bytes)
 {
-  if (head > tail) {
-    posicionsPlenes = head - tail;
+  posicionsPlenes = head - tail;
+  if(posicionsPlenes<0){
+    posicionsPlenes+=buff_sz;
   }
-  else {
-    posicionsPlenes = buff_sz - (tail - 1) + head;
-  }
-
-  if (posicionsPlenes > page_sz) {
-    return true;
-  }
-  else {
-    return false;
-  }
+  return posicionsPlenes >= available_bytes;
 }
 
 bool Buffer::spaceAvailable(uint16_t numeroBytes)
 {
-  if (head > tail) {
-    if ((buff_sz - (head - tail)) > numeroBytes) {return true;}
-    else {return false;}
-  }
-  else {
-    if ((buff_sz - (buff_sz - (tail - 1) + head)) > numeroBytes) {return true;}
-    else {return false;}
-  }
+  return !Check(buff_sz-numeroBytes);
 }
