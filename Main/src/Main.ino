@@ -68,7 +68,7 @@ void setup(){
   //dataInPage = (256)/(bytes_alt + bytes_timestamp);
   Serial.begin(baud_rate);
   while (!Serial) ; // Wait for Serial monitor to open
-  flash.begin();
+  flash.begin(MB64);
 
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
@@ -92,7 +92,8 @@ void loop(){
   checkLed();
   checkSerial();
   Serial.println("Erasing chip...");
-  flash.eraseChip();
+  if(flash.eraseChip()){
+  Serial.println("Erase chip success!");}else{Serial.println("Erase chip failed!");}
   Serial.println("Reading bmp280...");
   for(uint16_t ii=0;ii<50;ii++){
     read_bmp();
@@ -197,7 +198,7 @@ void buffer2serial(){
   Serial.print(", al1="); Serial.print(altByte[1]);
   Serial.print(", al2="); Serial.print(altByte[2]);
   Serial.print(", al3="); Serial.print(altByte[3]);
-  
+
 
   Serial.println();
 }
