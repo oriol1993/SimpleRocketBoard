@@ -17,36 +17,30 @@
 #define force_serial 1
 #define bytes_alt 4
 #define bytes_timestamp 2
-#define initial_page 16
-#define max_timestamp 65535
 #define baud_rate 115200
 
 // Declarations
+//  Classes
 Adafruit_BMP280 bmp;
 Buffer cbuffer;
 SPIFlash flash;
-
-byte altByte[bytes_alt];
-byte timeByte[bytes_timestamp];
-
-bool state = false;
-uint8_t dataInPage = 0;
-uint8_t serialData = 0;
-uint8_t led_state = 0;
-uint16_t timestamp = 0;
-uint16_t timestamp_ant = 0;
-uint32_t timestamp_noOF = 0;
-uint32_t last_bttn = 0;
-uint32_t led_flash = 0;
-uint32_t t_lastbmp = 0;
-uint32_t repetitions = 0;
-float alt = 0;
-float timestamp_ms = 0;
+//  Data storage
+byte altByte[bytes_alt], timeByte[bytes_timestamp];
+uint16_t timestamp = 0, timestamp_ant = 0;
+float timestamp_s = 0, alt;
+uint32_t address = 0;
 float ground_pressure = 1013.25;
+//  Addresses
+uint16_t pg = 0;
+uint8_t bff[256];
+//  Time
+uint32_t last_bttn = 0, led_flash = 0, t_lastbmp = 0;
+//  status
+bool state = false;
+uint8_t led_state = 0;
 bool serial_init = 0;
-unsigned long address = 0;
 
-
+uint8_t serialData = 0;
 int x = 0;
 
 
@@ -71,10 +65,10 @@ void setup(){
   }
 
   //DataInPage calculation + flash Initialization
-  dataInPage = (256)/(bytes_alt + bytes_timestamp);
+  //dataInPage = (256)/(bytes_alt + bytes_timestamp);
   Serial.begin(baud_rate);
   while (!Serial) ; // Wait for Serial monitor to open
-  flash.begin();
+  flash.begin(MB64);
 
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
@@ -94,12 +88,20 @@ void setup(){
 }
 
 void loop(){
- buttonCheck();
- checkLed();
- checkSerial();
- if (state == true) {
-   print_bmp();
- }
+  buttonCheck();
+  checkLed();
+  checkSerial();
+  Serial.println("Erasing chip...");
+  if(flash.eraseChip()){
+  Serial.println("Erase chip success!");}else{Serial.println("Erase chip failed!");}
+  Serial.println("Reading bmp280...");
+  for(uint16_t ii=0;ii<50;ii++){
+    read_bmp();
+    buffer2flash();
+  }
+  Serial.println("Reading flash...");
+  printAllPages();
+  while (1);
 }
 
 void buttonCheck(){
@@ -131,8 +133,9 @@ void checkSerial() {
   }
 }
 
-void print_bmp(){
-  if(millis()-t_lastbmp>2000  || 1)
+void read_bmp(){
+
+  if((millis()-t_lastbmp>2000 && state)  || 1)
   {
     // Acquire heigh measurement and time stamp
     alt = bmp.readAltitude(ground_pressure);
@@ -145,42 +148,58 @@ void print_bmp(){
     if (cbuffer.spaceAvailable(sizeof(altByte) + sizeof(timeByte))) {    //Check if there's enough space for all data
       cbuffer.CarregarBuffer(altByte, sizeof(altByte));
       cbuffer.CarregarBuffer(timeByte, sizeof(timeByte));
+    }else{
+      Serial.println("Not enough space in buffer");
     }
-    if(cbuffer.Check()) {
-      Serial.println("Yepah");
-      passDataToFlash();
-    }
-
     t_lastbmp = millis();
 
     // Debugging
-    /*Serial.print("h="); Serial.print(alt);
+
+    Serial.print("h="); Serial.print(alt);
     Serial.print(", ts="); Serial.print(timestamp);
+    /*
     Serial.print(", tb0="); Serial.print(timeByte[0]);
     Serial.print(", tb1="); Serial.print(timeByte[1]);
     Serial.print(", al0="); Serial.print(altByte[0]);
     Serial.print(", al1="); Serial.print(altByte[1]);
     Serial.print(", al2="); Serial.print(altByte[2]);
     Serial.print(", al3="); Serial.print(altByte[3]);
-    Serial.println();*/
+    */
+    Serial.println();
+  }
+}
+
+void buffer2flash(){
+  while(cbuffer.Check(256)) {
+    Serial.println("Writing page...");
+    passDataToFlash();
   }
 }
 
 void buffer2serial(){
   cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
   cbuffer.DescarregarBuffer(timeByte, sizeof(timeByte));
+
   timestamp = timeByte[0] | timeByte[1]<<8;
-  timestamp_ms = timestamp * 0.1;
+  timestamp_s+=((float) (timestamp-timestamp_ant))*0.0001;
+  if(timestamp<timestamp_ant){ timestamp_s+=6.5536;}
+  timestamp_ant = timestamp;
+
   alt = byte2float(altByte);
-  // Debugging
+
   Serial.print("h="); Serial.print(alt);
-  Serial.print(", ts="); Serial.print(timestamp_ms);
+  Serial.print(", ts="); Serial.print(timestamp_s);
+
+  // Debugging
+
   Serial.print(", tb0="); Serial.print(timeByte[0]);
   Serial.print(", tb1="); Serial.print(timeByte[1]);
   Serial.print(", al0="); Serial.print(altByte[0]);
   Serial.print(", al1="); Serial.print(altByte[1]);
   Serial.print(", al2="); Serial.print(altByte[2]);
   Serial.print(", al3="); Serial.print(altByte[3]);
+
+
   Serial.println();
 }
 
@@ -205,59 +224,23 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-  address = flash.readULong(0, 0, false);
-  Serial.println("Adresa:");
-  Serial.println(address);
-  Serial.println("start a carregar a la flash");
-  for (uint8_t i = 0; i < dataInPage; i++) {
-    cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
-    cbuffer.DescarregarBuffer(timeByte, sizeof(timeByte));
-    for(uint8_t j = 0; j < 4; j++) {
-      flash.writeByte(address, (i*6)+j, altByte[j], true);
-    }
-
-    for (uint8_t k = 0; k < 2; k++) {
-      flash.writeByte(address, 4+(6*i)+k, timeByte[k], true);
-    }
-  }
-  flash.eraseSector(0, 0);
-  flash.writeULong(0, 0, address + 1, false);
+  Serial.println("Downloading buffer...");
+  cbuffer.DescarregarBuffer(bff,256);
+  Serial.println("Writing 2 flash...");
+  flash.writeByteArray(pg++, 0, bff, 256, false);
+  Serial.println("Writing 2 flash finished...");
 }
 
 void printAllPages() {
-  if (!Serial){
-    Serial.begin(9600);
-  }
+  uint16_t i_pg = 0;
   Serial.println("Reading all pages");
-  uint8_t data_prova[256];
-  uint8_t alt_buffer[4];
-  uint8_t timestamp_buffer[2];
-  uint32_t maxPage = flash.readULong(0, 0, false);
-  for (int a = initial_page; a < maxPage; a++) {
-    for (uint16_t j = 0; j < 256; j++) {
-    data_prova[j] = flash.readByte(a, j, false);
-  }
-
-  for (uint8_t i = 0; i < dataInPage; i++) {
-    for (uint8_t j = 0; j < 4; j++) {
-      alt_buffer[j] = data_prova[(6 * i) + j];
-    }
-    alt = byte2float(alt_buffer);
-    Serial.print(alt);
-    Serial.print(",");
-
-    for (uint8_t j = 0; j < 2; j++) {
-      timestamp_buffer[j] = data_prova[4 + (6 * i) + j];
-    }
-    timestamp = timestamp_buffer[0] | timestamp_buffer[1]<<8;
-    if (timestamp < timestamp_ant) {
-      repetitions ++;
-      timestamp_noOF = (repetitions * max_timestamp) + timestamp;
-    }
-    else {timestamp_noOF = timestamp + (max_timestamp * repetitions);}
-    timestamp_ant = timestamp;
-    timestamp_ms = timestamp_noOF * 0.1;
-    Serial.println(timestamp_noOF);
+  cbuffer.reset();
+  while(i_pg<pg){
+    Serial.print("Reading page "); Serial.println(pg);
+    flash.readByteArray(i_pg++, 0, bff, 256, true);
+    cbuffer.CarregarBuffer(bff, sizeof(bff));
+    while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
+      buffer2serial();
     }
   }
 }
@@ -265,15 +248,9 @@ void printAllPages() {
 void switchTask(uint8_t var){
   switch (var) {
     case 1:
-      Serial.println("Erasing chip...");
-      for (uint32_t i = 0; i < flash.getMaxPage()/256; i++) {
-        flash.eraseBlock64K(i*256, 0);
-      }
+      Serial.println("Erasing chip...it can take a while");
+      flash.eraseChip();
       Serial.println("Chip erased!");
-      if (flash.writeULong(0, 0, initial_page, false)) {
-        Serial.print("Initial page = ");
-        Serial.println(flash.readULong(0, 0, false));
-      }
       break;
     case 9:
       printAllPages();
