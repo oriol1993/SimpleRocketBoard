@@ -8,6 +8,6 @@
 - Wait for the BMP280 to connect.
 - Type a ```9``` to the serial console to trigger the data dump.
 - Wait for all the data to transfer.
-- Press ```Ctrl+a``` to finish the screen app.
+- Press ```Ctrl+a ; k ; y``` to finish the screen app.
 - Type ```exit``` to finish the script recording.
 - Check that you have actually recieved all the data by typing ```% cat screen.log```. This should output the entire textfile into your terminal window.
