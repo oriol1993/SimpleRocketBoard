@@ -9,7 +9,7 @@
 #include <Adafruit_BMP280.h>
 #include <Buffer.h>
 #include <SPIFlash.h>
-#include <SPI.H>
+//#include <SPI.H>
 
 // Constants and sizes
 #define LED 3
@@ -18,7 +18,9 @@
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define baud_rate 115200
-//#define DEBUG
+#define sample_period 50
+#define n_pages 32768
+#define DEBUG
 
 #ifdef DEBUG
  #define DEBUG_PRINT(x)     Serial.print (x)
@@ -73,53 +75,48 @@ void setup(){
     serial_init = 1;
   }
 
-  //DataInPage calculation + flash Initialization
-  //dataInPage = (256)/(bytes_alt + bytes_timestamp);
-  Serial.begin(baud_rate);
-  while (!Serial) ; // Wait for Serial monitor to open
-  flash.begin(MB64);
-
   // BMP180 Initialization
-  DEBUG_PRINT(F("Initializing BMP280 ..."));
+  Serial.print(F("Initializing FLASH memory ..."));
+  if (!flash.begin()) {
+    Serial.println(F("unable to connect!"));
+    //while (1);
+  }
+  Serial.println(F("connection successful!"));
+  // BMP180 Initialization
+  Serial.print(F("Initializing BMP280 ..."));
   if (!bmp.begin()) {
-    DEBUG_PRINTLN(F("Unable to connect!"));
+    Serial.println(F("unable to connect!"));
     while (1);
   }
+  Serial.println(F("connection successful!"));
 
-  DEBUG_PRINTLN(F("Connection successful!"));
   bmp.osrs_p = 15; // 4.3.4 Table 21
   bmp.osrs_t = 1; // 4.3.4 Table 22
   bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
   bmp.filter = 5; // 3.3.3
   get_gnd_pressure(ground_pressure);
-  DEBUG_PRINT("p @ h=0m = "); DEBUG_PRINT(ground_pressure); DEBUG_PRINTLN(" Pa");
+  Serial.print(F("p @ h=0m = ")); Serial.print(ground_pressure); Serial.println(F(" Pa"));
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
+  Serial.println(F("COMMANDS: "));
+  Serial.println(F("1.- Erase chip"));
+  Serial.println(F("2.- Erase required sectors"));
+  Serial.println(F("3.- Manual start/stop"));
+  Serial.println(F("4.- Dump data"));
 }
 
 void loop(){
   buttonCheck();
   checkLed();
   checkSerial();
-  DEBUG_PRINTLN("Erasing chip...");
-  if(flash.eraseChip()){
-  DEBUG_PRINTLN("Erase chip success!");}else{DEBUG_PRINTLN("Erase chip failed!");}
-  DEBUG_PRINTLN("Reading bmp280...");
-  for(uint16_t ii=0;ii<50;ii++){
-    read_bmp();
-    buffer2flash();
-  }
-  DEBUG_PRINTLN("Reading flash...");
-  printAllPages();
-  while (1);
+  read_bmp();
+  buffer2flash();
 }
 
 void buttonCheck(){
  if (millis() - last_bttn > 300) {
   if (digitalRead(PB) == 0){
-   state = !state;
-   last_bttn = millis();
-   led_flash = millis();
-   led_state = 1;
+    startstop();
+    last_bttn = millis();
   }
  }
 }
@@ -144,7 +141,7 @@ void checkSerial() {
 
 void read_bmp(){
 
-  if((millis()-t_lastbmp>2000 && state)  || 1)
+  if(millis()-t_lastbmp>sample_period && state)
   {
     // Acquire heigh measurement and time stamp
     alt = bmp.readAltitude(ground_pressure);
@@ -162,10 +159,9 @@ void read_bmp(){
     }
     t_lastbmp = millis();
 
-    // Debugging
-
     DEBUG_PRINT("h="); DEBUG_PRINT(alt);
     DEBUG_PRINT(", ts="); DEBUG_PRINT(timestamp);
+    // Debugging
     /*
     DEBUG_PRINT(", tb0="); DEBUG_PRINT(timeByte[0]);
     DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
@@ -180,14 +176,15 @@ void read_bmp(){
 
 void buffer2flash(){
   while(cbuffer.Check(256)) {
-    DEBUG_PRINTLN("Writing page...");
+    DEBUG_PRINT(F("Writing page ")); DEBUG_PRINTLN(pg);
     passDataToFlash();
   }
 }
 
-void buffer2serial(){
+bool buffer2serial(){
   cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
   cbuffer.DescarregarBuffer(timeByte, sizeof(timeByte));
+
 
   timestamp = timeByte[0] | timeByte[1]<<8;
   timestamp_s+=((float) (timestamp-timestamp_ant))*0.0001;
@@ -196,20 +193,23 @@ void buffer2serial(){
 
   alt = byte2float(altByte);
 
-  Serial.print("h=");   Serial.print(alt);
-  Serial.print(", ts=");   Serial.print(timestamp_s);
-
   // Debugging
 
-  DEBUG_PRINT(", tb0="); DEBUG_PRINT(timeByte[0]);
+  DEBUG_PRINT("tb0="); DEBUG_PRINT(timeByte[0]);
   DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
   DEBUG_PRINT(", al0="); DEBUG_PRINT(altByte[0]);
   DEBUG_PRINT(", al1="); DEBUG_PRINT(altByte[1]);
   DEBUG_PRINT(", al2="); DEBUG_PRINT(altByte[2]);
   DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
+  DEBUG_PRINTLN();
 
+  if(timeByte[0]==255 && timeByte[1]==255 && altByte[0]==255 && altByte[1]==255 && altByte[2]==255 && altByte[3]==255 ){return false;}
 
-    Serial.println();
+  Serial.print("h=");   Serial.print(alt);
+  Serial.print(", ts=");   Serial.print(timestamp_s);
+  Serial.println();
+
+  return true;
 }
 
 void float2byte(float val,byte bytes_array[]){
@@ -233,38 +233,71 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-  DEBUG_PRINTLN("Downloading buffer...");
   cbuffer.DescarregarBuffer(bff,256);
-  DEBUG_PRINTLN("Writing 2 flash...");
   flash.writeByteArray(pg++, 0, bff, 256, false);
-  DEBUG_PRINTLN("Writing 2 flash finished...");
+  if(pg>n_pages){startstop();}
 }
 
 void printAllPages() {
-  uint16_t i_pg = 0;
+  bool nd;
   DEBUG_PRINTLN("Reading all pages");
   cbuffer.reset();
-  while(i_pg<pg){
+  pg = 0;
+  while(pg<n_pages){
     DEBUG_PRINT("Reading page "); DEBUG_PRINTLN(pg);
-    flash.readByteArray(i_pg++, 0, bff, 256, false);
+    flash.readByteArray(pg++, 0, bff, 256, false);
     cbuffer.CarregarBuffer(bff, sizeof(bff));
     while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
-      buffer2serial();
+      nd = !buffer2serial();
+      if(nd){break;}
     }
+    if(nd){break;}
   }
+  Serial.print(pg); Serial.println(F(" pages found"));
 }
 
 void switchTask(uint8_t var){
+  uint16_t i_pg = 0;
   switch (var) {
     case 1:
-      DEBUG_PRINTLN("Erasing chip...it can take a while");
-      flash.eraseChip();
-      DEBUG_PRINTLN("Chip erased!");
+        Serial.println(F("Erasing chip..."));
+        if(flash.eraseChip()){
+          Serial.println(F("Erase chip success!"));
+        }else{
+          Serial.println(F("Erase chip failed!"));
+        }
       break;
-    case 9:
+    case 2:
+        Serial.println(F("Erasing chip (intellegently)..."));
+        printAllPages();
+
+        while(i_pg<=pg){
+          flash.eraseSector(i_pg,0);
+          i_pg += 16;
+        }
+        pg = 0;
+      break;
+    case 3:
+        Serial.println(F("Serial start/stop!"));
+        startstop();
+      break;
+    case 4:
       printAllPages();
       break;
     default:
       break;
+  }
+}
+
+void startstop(){
+  led_flash = millis();
+  led_state = 1;
+  state = !state;
+  if(state){
+    pg = 0;
+    Serial.println(F("Recording started!"));
+  }else{
+    Serial.println(F("Recording finished!"));
+    Serial.print(pg-1); Serial.println(F(" pages written"));
   }
 }
