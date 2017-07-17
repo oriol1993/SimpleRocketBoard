@@ -1,8 +1,10 @@
 %% Data
-port = '';
-BaudRate = '';
-dataDumpCommand = 9;
+% port = '';
+% BaudRate = '';
+% dataDumpCommand = 9;
 
-%% Open comunication
-s = serial(port);
-fopen(s)
+%% Read .log file
+A = importdata('screen.log');
+
+%% Plot data
+plot((A.data(:,2)),A.data(:,1));
