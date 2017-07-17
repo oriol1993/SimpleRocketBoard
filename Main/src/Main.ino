@@ -18,6 +18,15 @@
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define baud_rate 115200
+//#define DEBUG
+
+#ifdef DEBUG
+ #define DEBUG_PRINT(x)     Serial.print (x)
+ #define DEBUG_PRINTLN(x)  Serial.println (x)
+#else
+ #define DEBUG_PRINT(x)
+ #define DEBUG_PRINTLN(x)
+#endif
 
 // Declarations
 //  Classes
@@ -71,19 +80,19 @@ void setup(){
   flash.begin(MB64);
 
   // BMP180 Initialization
-  Serial.print(F("Initializing BMP280 ..."));
+  DEBUG_PRINT(F("Initializing BMP280 ..."));
   if (!bmp.begin()) {
-    Serial.println(F("Unable to connect!"));
+    DEBUG_PRINTLN(F("Unable to connect!"));
     while (1);
   }
 
-  Serial.println(F("Connection successful!"));
+  DEBUG_PRINTLN(F("Connection successful!"));
   bmp.osrs_p = 15; // 4.3.4 Table 21
   bmp.osrs_t = 1; // 4.3.4 Table 22
   bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
   bmp.filter = 5; // 3.3.3
   get_gnd_pressure(ground_pressure);
-  Serial.print("p @ h=0m = "); Serial.print(ground_pressure); Serial.println(" Pa");
+  DEBUG_PRINT("p @ h=0m = "); DEBUG_PRINT(ground_pressure); DEBUG_PRINTLN(" Pa");
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
 }
 
@@ -91,15 +100,15 @@ void loop(){
   buttonCheck();
   checkLed();
   checkSerial();
-  Serial.println("Erasing chip...");
+  DEBUG_PRINTLN("Erasing chip...");
   if(flash.eraseChip()){
-  Serial.println("Erase chip success!");}else{Serial.println("Erase chip failed!");}
-  Serial.println("Reading bmp280...");
+  DEBUG_PRINTLN("Erase chip success!");}else{DEBUG_PRINTLN("Erase chip failed!");}
+  DEBUG_PRINTLN("Reading bmp280...");
   for(uint16_t ii=0;ii<50;ii++){
     read_bmp();
     buffer2flash();
   }
-  Serial.println("Reading flash...");
+  DEBUG_PRINTLN("Reading flash...");
   printAllPages();
   while (1);
 }
@@ -149,29 +158,29 @@ void read_bmp(){
       cbuffer.CarregarBuffer(altByte, sizeof(altByte));
       cbuffer.CarregarBuffer(timeByte, sizeof(timeByte));
     }else{
-      Serial.println("Not enough space in buffer");
+      DEBUG_PRINTLN("Not enough space in buffer");
     }
     t_lastbmp = millis();
 
     // Debugging
 
-    Serial.print("h="); Serial.print(alt);
-    Serial.print(", ts="); Serial.print(timestamp);
+    DEBUG_PRINT("h="); DEBUG_PRINT(alt);
+    DEBUG_PRINT(", ts="); DEBUG_PRINT(timestamp);
     /*
-    Serial.print(", tb0="); Serial.print(timeByte[0]);
-    Serial.print(", tb1="); Serial.print(timeByte[1]);
-    Serial.print(", al0="); Serial.print(altByte[0]);
-    Serial.print(", al1="); Serial.print(altByte[1]);
-    Serial.print(", al2="); Serial.print(altByte[2]);
-    Serial.print(", al3="); Serial.print(altByte[3]);
+    DEBUG_PRINT(", tb0="); DEBUG_PRINT(timeByte[0]);
+    DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
+    DEBUG_PRINT(", al0="); DEBUG_PRINT(altByte[0]);
+    DEBUG_PRINT(", al1="); DEBUG_PRINT(altByte[1]);
+    DEBUG_PRINT(", al2="); DEBUG_PRINT(altByte[2]);
+    DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
     */
-    Serial.println();
+    DEBUG_PRINTLN();
   }
 }
 
 void buffer2flash(){
   while(cbuffer.Check(256)) {
-    Serial.println("Writing page...");
+    DEBUG_PRINTLN("Writing page...");
     passDataToFlash();
   }
 }
@@ -187,20 +196,20 @@ void buffer2serial(){
 
   alt = byte2float(altByte);
 
-  Serial.print("h="); Serial.print(alt);
-  Serial.print(", ts="); Serial.print(timestamp_s);
+  Serial.print("h=");   Serial.print(alt);
+  Serial.print(", ts=");   Serial.print(timestamp_s);
 
   // Debugging
 
-  Serial.print(", tb0="); Serial.print(timeByte[0]);
-  Serial.print(", tb1="); Serial.print(timeByte[1]);
-  Serial.print(", al0="); Serial.print(altByte[0]);
-  Serial.print(", al1="); Serial.print(altByte[1]);
-  Serial.print(", al2="); Serial.print(altByte[2]);
-  Serial.print(", al3="); Serial.print(altByte[3]);
+  DEBUG_PRINT(", tb0="); DEBUG_PRINT(timeByte[0]);
+  DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
+  DEBUG_PRINT(", al0="); DEBUG_PRINT(altByte[0]);
+  DEBUG_PRINT(", al1="); DEBUG_PRINT(altByte[1]);
+  DEBUG_PRINT(", al2="); DEBUG_PRINT(altByte[2]);
+  DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
 
 
-  Serial.println();
+    Serial.println();
 }
 
 void float2byte(float val,byte bytes_array[]){
@@ -224,20 +233,20 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-  Serial.println("Downloading buffer...");
+  DEBUG_PRINTLN("Downloading buffer...");
   cbuffer.DescarregarBuffer(bff,256);
-  Serial.println("Writing 2 flash...");
+  DEBUG_PRINTLN("Writing 2 flash...");
   flash.writeByteArray(pg++, 0, bff, 256, false);
-  Serial.println("Writing 2 flash finished...");
+  DEBUG_PRINTLN("Writing 2 flash finished...");
 }
 
 void printAllPages() {
   uint16_t i_pg = 0;
-  Serial.println("Reading all pages");
+  DEBUG_PRINTLN("Reading all pages");
   cbuffer.reset();
   while(i_pg<pg){
-    Serial.print("Reading page "); Serial.println(pg);
-    flash.readByteArray(i_pg++, 0, bff, 256, true);
+    DEBUG_PRINT("Reading page "); DEBUG_PRINTLN(pg);
+    flash.readByteArray(i_pg++, 0, bff, 256, false);
     cbuffer.CarregarBuffer(bff, sizeof(bff));
     while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
       buffer2serial();
@@ -248,9 +257,9 @@ void printAllPages() {
 void switchTask(uint8_t var){
   switch (var) {
     case 1:
-      Serial.println("Erasing chip...it can take a while");
+      DEBUG_PRINTLN("Erasing chip...it can take a while");
       flash.eraseChip();
-      Serial.println("Chip erased!");
+      DEBUG_PRINTLN("Chip erased!");
       break;
     case 9:
       printAllPages();
