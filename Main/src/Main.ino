@@ -54,6 +54,17 @@ bool serial_init = 0;
 uint8_t serialData = 0;
 int x = 0;
 
+//S'ha de borrar
+uint32_t timestamp_noOF = 0;
+uint32_t repetitions = 0;
+float timestamp_ms = 0;
+uint8_t dataInPage = 43;
+#define max_timestamp 65535
+
+
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //                            FUNCTIONS
@@ -178,7 +189,7 @@ void read_bmp(){
 }
 
 void buffer2flash(){
-  while(cbuffer.Check(256)) {
+  if(cbuffer.Check(252)) {
     DEBUG_PRINT(F("Writing page ")); DEBUG_PRINTLN(pg);
     passDataToFlash();
   }
@@ -236,8 +247,8 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-  cbuffer.DescarregarBuffer(bff,256);
-  flash.writeByteArray(pg++, 0, bff, 256, false);
+  cbuffer.DescarregarBuffer(bff,252);
+  flash.writeByteArray(pg++, 0, bff, PAGESIZE, false);
   if(pg>n_pages){startstop();}
 }
 
@@ -248,8 +259,8 @@ void printAllPages() {
   pg = 0;
   while(pg<n_pages){
     DEBUG_PRINT("Reading page "); DEBUG_PRINTLN(pg);
-    flash.readByteArray(pg++, 0, bff, 256, false);
-    cbuffer.CarregarBuffer(bff, sizeof(bff));
+    flash.readByteArray(pg++, 0, bff, PAGESIZE, false);
+    cbuffer.CarregarBuffer(bff, 252);
     while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
       nd = !buffer2serial();
       if(nd){break;}
