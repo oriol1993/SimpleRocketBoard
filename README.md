@@ -6,7 +6,7 @@
 - Start recording the terminal to a _.log_ file: ```% script screen.log```
 - Start the serial communication: ```% screen /dev/tty.serialPortToUse 115200```
 - Wait for the BMP280 to connect.
-- Type a ```9``` to the serial console to trigger the data dump.
+- Type a ```4``` to the serial console to trigger the data dump.
 - Wait for all the data to transfer.
 - Press ```Ctrl+a ; k ; y``` to finish the screen app.
 - Type ```exit``` to finish the script recording.

@@ -1,4 +1,4 @@
-%% Data
+A = %% Data
 % port = '';
 % BaudRate = '';
 % dataDumpCommand = 9;
