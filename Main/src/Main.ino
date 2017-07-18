@@ -64,7 +64,7 @@ void setup(){
   pinMode(LED, OUTPUT);
   pinMode(PB, INPUT_PULLUP);
   if(!digitalRead(PB) | force_serial){
-    Serial.begin(9600);
+    Serial.begin(baud_rate);
     for(uint8_t i=0;i<7;i++)
     {
       digitalWrite(LED,HIGH);
@@ -75,20 +75,23 @@ void setup(){
     serial_init = 1;
   }
 
-  // BMP180 Initialization
+  // Flash Initialization
   Serial.print(F("Initializing FLASH memory ..."));
+  flash.begin();
+  delay(5000);
   if (!flash.begin()) {
     Serial.println(F("unable to connect!"));
     //while (1);
   }
-  Serial.println(F("connection successful!"));
+  else {Serial.println(F("connection successful!"));}
+
   // BMP180 Initialization
   Serial.print(F("Initializing BMP280 ..."));
   if (!bmp.begin()) {
     Serial.println(F("unable to connect!"));
     while (1);
   }
-  Serial.println(F("connection successful!"));
+  else{Serial.println(F("connection successful!"));}
 
   bmp.osrs_p = 15; // 4.3.4 Table 21
   bmp.osrs_t = 1; // 4.3.4 Table 22
@@ -195,21 +198,21 @@ bool buffer2serial(){
 
   // Debugging
 
-  DEBUG_PRINT("tb0="); DEBUG_PRINT(timeByte[0]);
+  /*DEBUG_PRINT("tb0="); DEBUG_PRINT(timeByte[0]);
   DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
   DEBUG_PRINT(", al0="); DEBUG_PRINT(altByte[0]);
   DEBUG_PRINT(", al1="); DEBUG_PRINT(altByte[1]);
   DEBUG_PRINT(", al2="); DEBUG_PRINT(altByte[2]);
   DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
-  DEBUG_PRINTLN();
-
-  if(timeByte[0]==255 && timeByte[1]==255 && altByte[0]==255 && altByte[1]==255 && altByte[2]==255 && altByte[3]==255 ){return false;}
+  DEBUG_PRINTLN();*/
 
   Serial.print("h=");   Serial.print(alt);
   Serial.print(", ts=");   Serial.print(timestamp_s);
   Serial.println();
 
-  return true;
+  if(timeByte[0]==255 && timeByte[1]==255 && altByte[0]==255 && altByte[1]==255 && altByte[2]==255 && altByte[3]==255 ){return false;}
+  else {return true;}
+
 }
 
 void float2byte(float val,byte bytes_array[]){
