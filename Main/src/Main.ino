@@ -20,7 +20,7 @@
 #define baud_rate 115200
 #define sample_period 50
 #define n_pages 32768
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
  #define DEBUG_PRINT(x)     Serial.print (x)
@@ -54,18 +54,6 @@ bool serial_init = 0;
 uint8_t serialData = 0;
 int x = 0;
 
-//S'ha de borrar
-uint32_t timestamp_noOF = 0;
-uint32_t repetitions = 0;
-float timestamp_ms = 0;
-uint8_t dataInPage = 43;
-#define max_timestamp 65535
-
-
-
-
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //                            FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////
@@ -87,22 +75,22 @@ void setup(){
   }
 
   // Flash Initialization
-  Serial.print(F("Initializing FLASH memory ..."));
+  DEBUG_PRINT(F("Initializing FLASH memory ..."));
   flash.begin();
-  delay(5000);
+  delay(500);
   if (!flash.begin()) {
-    Serial.println(F("unable to connect!"));
+    DEBUG_PRINTLN(F("unable to connect!"));
     //while (1);
   }
-  else {Serial.println(F("connection successful!"));}
+  else {DEBUG_PRINTLN(F("connection successful!"));}
 
   // BMP180 Initialization
-  Serial.print(F("Initializing BMP280 ..."));
+DEBUG_PRINT(F("Initializing BMP280 ..."));
   if (!bmp.begin()) {
-    Serial.println(F("unable to connect!"));
+    DEBUG_PRINTLN(F("unable to connect!"));
     while (1);
   }
-  else{Serial.println(F("connection successful!"));}
+  else{DEBUG_PRINTLN(F("connection successful!"));}
 
   bmp.osrs_p = 15; // 4.3.4 Table 21
   bmp.osrs_t = 1; // 4.3.4 Table 22
@@ -202,23 +190,22 @@ bool buffer2serial(){
 
   timestamp = timeByte[0] | timeByte[1]<<8;
   timestamp_s+=((float) (timestamp-timestamp_ant))*0.0001;
-  if(timestamp<timestamp_ant){ timestamp_s+=6.5536;}
   timestamp_ant = timestamp;
 
   alt = byte2float(altByte);
 
   // Debugging
 
-  /*DEBUG_PRINT("tb0="); DEBUG_PRINT(timeByte[0]);
+  DEBUG_PRINT("tb0="); DEBUG_PRINT(timeByte[0]);
   DEBUG_PRINT(", tb1="); DEBUG_PRINT(timeByte[1]);
   DEBUG_PRINT(", al0="); DEBUG_PRINT(altByte[0]);
   DEBUG_PRINT(", al1="); DEBUG_PRINT(altByte[1]);
   DEBUG_PRINT(", al2="); DEBUG_PRINT(altByte[2]);
   DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
-  DEBUG_PRINTLN();*/
+  DEBUG_PRINTLN();
 
-  Serial.print("h=");   Serial.print(alt);
-  Serial.print(", ts=");   Serial.print(timestamp_s);
+  Serial.print(alt); Serial.print(",");
+  Serial.print(timestamp_s);
   Serial.println();
 
   if(timeByte[0]==255 && timeByte[1]==255 && altByte[0]==255 && altByte[1]==255 && altByte[2]==255 && altByte[3]==255 ){return false;}
@@ -267,7 +254,7 @@ void printAllPages() {
     }
     if(nd){break;}
   }
-  Serial.print(pg); Serial.println(F(" pages found"));
+  DEBUG_PRINT(pg); DEBUG_PRINTLN(F(" pages found"));
 }
 
 void switchTask(uint8_t var){
