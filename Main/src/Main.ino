@@ -20,7 +20,7 @@
 #define baud_rate 115200
 #define sample_period 50
 #define n_pages 32768
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
  #define DEBUG_PRINT(x)     Serial.print (x)
@@ -99,6 +99,9 @@ DEBUG_PRINT(F("Initializing BMP280 ..."));
   get_gnd_pressure(ground_pressure);
   Serial.print(F("p @ h=0m = ")); Serial.print(ground_pressure); Serial.println(F(" Pa"));
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
+  info();
+}
+void info(){
   Serial.println(F("COMMANDS: "));
   Serial.println(F("1.- Erase chip"));
   Serial.println(F("2.- Erase required sectors"));
@@ -236,7 +239,7 @@ void get_gnd_pressure(float &ground_pressure){
 void passDataToFlash(){
   cbuffer.DescarregarBuffer(bff,252);
   flash.writeByteArray(pg++, 0, bff, PAGESIZE, false);
-  if(pg>n_pages){startstop();}
+  if(pg>n_pages){Serial.println(F("Max data reached!")); startstop();}
 }
 
 void printAllPages() {
@@ -264,31 +267,35 @@ void switchTask(uint8_t var){
     case 1:
         Serial.println(F("Erasing chip..."));
         if(flash.eraseChip()){
-          Serial.println(F("Erase chip success!"));
+
         }else{
           Serial.println(F("Erase chip failed!"));
         }
+        info();
       break;
     case 2:
-        Serial.println(F("Erasing chip (intellegently)..."));
+        Serial.print(F("Erasing chip (intellegently)..."));
         printAllPages();
-
         while(i_pg<=pg){
           flash.eraseSector(i_pg,0);
           i_pg += 16;
         }
         pg = 0;
+        info();
       break;
+      Serial.println(F("Erase chip success!"));
     case 3:
         Serial.println(F("Serial start/stop!"));
         startstop();
       break;
     case 4:
       printAllPages();
+      info();
       break;
     default:
       break;
   }
+
 }
 
 void startstop(){
@@ -303,5 +310,6 @@ void startstop(){
     Serial.println(F("Recording finished!"));
     Serial.print(pg-1); Serial.println(F(" pages written"));
     cbuffer.reset();
+    info();
   }
 }
