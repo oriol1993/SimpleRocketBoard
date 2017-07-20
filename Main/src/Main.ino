@@ -20,7 +20,7 @@
 #define baud_rate 115200
 #define sample_period 50
 #define n_pages 32768
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
  #define DEBUG_PRINT(x)     Serial.print (x)
@@ -244,6 +244,7 @@ void printAllPages() {
   DEBUG_PRINTLN("Reading all pages");
   cbuffer.reset();
   pg = 0;
+  timestamp_s = 0;
   while(pg<n_pages){
     DEBUG_PRINT("Reading page "); DEBUG_PRINTLN(pg);
     flash.readByteArray(pg++, 0, bff, PAGESIZE, false);
@@ -295,10 +296,12 @@ void startstop(){
   led_state = 1;
   state = !state;
   if(state){
+    cbuffer.reset();
     pg = 0;
     Serial.println(F("Recording started!"));
   }else{
     Serial.println(F("Recording finished!"));
     Serial.print(pg-1); Serial.println(F(" pages written"));
+    cbuffer.reset();
   }
 }
