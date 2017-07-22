@@ -18,7 +18,7 @@
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define baud_rate 115200
-#define sample_period 50
+#define sample_period 22
 #define n_pages 32768
 //#define DEBUG
 
@@ -92,16 +92,17 @@ DEBUG_PRINT(F("Initializing BMP280 ..."));
   }
   else{DEBUG_PRINTLN(F("connection successful!"));}
 
-  bmp.osrs_p = 15; // 4.3.4 Table 21
-  bmp.osrs_t = 1; // 4.3.4 Table 22
-  bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
-  bmp.filter = 5; // 3.3.3
+  bmp.osrs_p = B100; // 4.3.4 Table 21
+  bmp.osrs_t = B010; // 4.3.4 Table 22
+  bmp.t_sb = B000; // 3.6.3 Table 11, 4.3.5
+  bmp.filter = B010; // 3.3.3
   get_gnd_pressure(ground_pressure);
   Serial.print(F("p @ h=0m = ")); Serial.print(ground_pressure); Serial.println(F(" Pa"));
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
   info();
 }
 void info(){
+
   Serial.println(F("COMMANDS: "));
   Serial.println(F("1.- Erase chip"));
   Serial.println(F("2.- Erase required sectors"));
@@ -148,6 +149,7 @@ void read_bmp(){
 
   if(millis()-t_lastbmp>sample_period && state)
   {
+    t_lastbmp = millis();
     // Acquire heigh measurement and time stamp
     alt = bmp.readAltitude(ground_pressure);
     timestamp = (micros()/100)%65536;
@@ -162,7 +164,7 @@ void read_bmp(){
     }else{
       DEBUG_PRINTLN("Not enough space in buffer");
     }
-    t_lastbmp = millis();
+
 
     DEBUG_PRINT("h="); DEBUG_PRINT(alt);
     DEBUG_PRINT(", ts="); DEBUG_PRINT(timestamp);
@@ -186,7 +188,7 @@ void buffer2flash(){
   }
 }
 
-bool buffer2serial(){
+bool buffer2serial(bool doprint){
   cbuffer.DescarregarBuffer(altByte, sizeof(altByte));
   cbuffer.DescarregarBuffer(timeByte, sizeof(timeByte));
 
@@ -207,9 +209,11 @@ bool buffer2serial(){
   DEBUG_PRINT(", al3="); DEBUG_PRINT(altByte[3]);
   DEBUG_PRINTLN();
 
-  Serial.print(alt); Serial.print(",");
-  Serial.print(timestamp_s);
-  Serial.println();
+  if(doprint){Serial.print(alt,2); Serial.print(",");
+    Serial.print(timestamp_s,3);
+    Serial.println();
+  }
+
 
   if(timeByte[0]==255 && timeByte[1]==255 && altByte[0]==255 && altByte[1]==255 && altByte[2]==255 && altByte[3]==255 ){return false;}
   else {return true;}
@@ -242,7 +246,7 @@ void passDataToFlash(){
   if(pg>n_pages){Serial.println(F("Max data reached!")); startstop();}
 }
 
-void printAllPages() {
+void printAllPages(bool doprint) {
   bool nd;
   DEBUG_PRINTLN("Reading all pages");
   cbuffer.reset();
@@ -253,7 +257,7 @@ void printAllPages() {
     flash.readByteArray(pg++, 0, bff, PAGESIZE, false);
     cbuffer.CarregarBuffer(bff, 252);
     while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
-      nd = !buffer2serial();
+      nd = !buffer2serial(doprint);
       if(nd){break;}
     }
     if(nd){break;}
@@ -275,12 +279,13 @@ void switchTask(uint8_t var){
       break;
     case 2:
         Serial.print(F("Erasing chip (intellegently)..."));
-        printAllPages();
+        printAllPages(false);
         while(i_pg<=pg){
           flash.eraseSector(i_pg,0);
           i_pg += 16;
         }
         pg = 0;
+        Serial.println(F("done!"));
         info();
       break;
       Serial.println(F("Erase chip success!"));
@@ -289,7 +294,7 @@ void switchTask(uint8_t var){
         startstop();
       break;
     case 4:
-      printAllPages();
+      printAllPages(true);
       info();
       break;
     default:
