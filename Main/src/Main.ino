@@ -14,7 +14,7 @@
 // Constants and sizes
 #define LED 3
 #define PB 5
-#define force_serial 1
+#define force_serial 0
 #define bytes_alt 4
 #define bytes_timestamp 2
 #define baud_rate 115200
@@ -129,7 +129,7 @@ void buttonCheck(){
 
 void checkLed(){
  if (state == true){
-  if (millis() - led_flash > 500) {
+  if ((!led_state & (millis() - led_flash > 900)) || (led_state & (millis() - led_flash > 100))) {
    led_state = !led_state;
    led_flash = millis();
    digitalWrite(LED, led_state);
@@ -182,7 +182,7 @@ void read_bmp(){
 }
 
 void buffer2flash(){
-  if(cbuffer.Check(252)) {
+  if(cbuffer.Check(256)) {//252
     DEBUG_PRINT(F("Writing page ")); DEBUG_PRINTLN(pg);
     passDataToFlash();
   }
@@ -241,7 +241,7 @@ void get_gnd_pressure(float &ground_pressure){
 }
 
 void passDataToFlash(){
-  cbuffer.DescarregarBuffer(bff,252);
+  cbuffer.DescarregarBuffer(bff,256);//252
   flash.writeByteArray(pg++, 0, bff, PAGESIZE, false);
   if(pg>n_pages){Serial.println(F("Max data reached!")); startstop();}
 }
@@ -255,7 +255,7 @@ void printAllPages(bool doprint) {
   while(pg<n_pages){
     DEBUG_PRINT("Reading page "); DEBUG_PRINTLN(pg);
     flash.readByteArray(pg++, 0, bff, PAGESIZE, false);
-    cbuffer.CarregarBuffer(bff, 252);
+    cbuffer.CarregarBuffer(bff, 256);//252
     while(cbuffer.Check(sizeof(altByte) + sizeof(timeByte))){
       nd = !buffer2serial(doprint);
       if(nd){break;}
