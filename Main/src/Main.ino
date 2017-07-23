@@ -92,10 +92,10 @@ DEBUG_PRINT(F("Initializing BMP280 ..."));
   }
   else{DEBUG_PRINTLN(F("connection successful!"));}
 
-  bmp.osrs_p = 15; // 4.3.4 Table 21
-  bmp.osrs_t = 1; // 4.3.4 Table 22
+  bmp.osrs_p = 0; // 4.3.4 Table 21
+  bmp.osrs_t = 0; // 4.3.4 Table 22
   bmp.t_sb = 0; // 3.6.3 Table 11, 4.3.5
-  bmp.filter = 5; // 3.3.3
+  bmp.filter = 0; // 3.3.3
   get_gnd_pressure(ground_pressure);
   Serial.print(F("p @ h=0m = ")); Serial.print(ground_pressure); Serial.println(F(" Pa"));
   cbuffer.reset(); // Buffer Initialization (head = 0; tail = 0)
