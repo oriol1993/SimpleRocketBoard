@@ -20,6 +20,7 @@
 #define baud_rate 115200
 #define sample_period 22
 #define n_pages 32768
+#define LED_INTENSITY 50
 //#define DEBUG
 
 #ifdef DEBUG
@@ -61,6 +62,7 @@ int x = 0;
 void setup(){
   // Input and output
   pinMode(LED, OUTPUT);
+  analogWrite(LED, LED_INTENSITY);
   pinMode(PB, INPUT_PULLUP);
   if(!digitalRead(PB) | force_serial){
     Serial.begin(baud_rate);
@@ -129,19 +131,21 @@ void buttonCheck(){
 
 void checkLed(){
  if (state == true){
-  if ((!led_state & (millis() - led_flash > 900)) || (led_state & (millis() - led_flash > 100))) {
+  if ((!led_state & (millis() - led_flash > 925)) || (led_state & (millis() - led_flash > 75))) {
    led_state = !led_state;
    led_flash = millis();
-   digitalWrite(LED, led_state);
+   analogWrite(LED, led_state*LED_INTENSITY);
   }
  }
- else { digitalWrite(LED, LOW); }
+ else { analogWrite(LED, LED_INTENSITY); }
 }
 
 void checkSerial() {
-  if (Serial.available() > 0) {
-    serialData = Serial.parseInt();
-    switchTask(serialData);
+  if(serial_init){
+    if (Serial.available() > 0) {
+      serialData = Serial.parseInt();
+      switchTask(serialData);
+    }
   }
 }
 
